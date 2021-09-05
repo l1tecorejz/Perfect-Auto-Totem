@@ -13,6 +13,7 @@ import meteordevelopment.meteorclient.systems.modules.Module;
 import meteordevelopment.orbit.EventHandler;
 import net.minecraft.client.gui.screen.ingame.CreativeInventoryScreen;
 import net.minecraft.client.gui.screen.ingame.HandledScreen;
+import net.minecraft.client.network.PlayerListEntry;
 import net.minecraft.enchantment.EnchantmentHelper;
 import net.minecraft.entity.attribute.EntityAttributes;
 import net.minecraft.entity.damage.DamageSource;
@@ -267,10 +268,13 @@ public class AutoTotem extends Module
         Validate.notNull(mc.player);
         Validate.notNull(mc.world);
 
-        if (mc.player.isFallFlying()) return false;
+        if (mc.player.isFallFlying()) return false; // TODO: return false only when speed is enough too pop totem
+        if (GetLatency() * 4 >= 500) return false;  // TODO: assume TPS: 10 * interval_per_tick instead of 500
 
         float health = GetHealth();
         if (health < 10.f) return false;
+
+        if(mc.player.fallDistance > 3.f && health - mc.player.fallDistance * 0.5 <= 1.f) return false;
 
         double resistance_coefficient = 1.d;
         if (mc.player.hasStatusEffect(StatusEffects.RESISTANCE))
@@ -313,6 +317,13 @@ public class AutoTotem extends Module
     {
         Validate.notNull(mc.player);
         return mc.player.getHealth() + mc.player.getAbsorptionAmount(); // TODO: fix ghost absorption
+    }
+
+    private long GetLatency()   // TODO: need more accurate latency calculation
+    {
+        Validate.notNull(mc.player);
+        PlayerListEntry playerListEntry = mc.player.networkHandler.getPlayerListEntry(mc.player.getUuid());
+        return playerListEntry != null ? playerListEntry.getLatency() : 0L;
     }
 
     // vars
