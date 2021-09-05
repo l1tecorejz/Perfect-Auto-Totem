@@ -43,6 +43,7 @@ public class AutoTotem extends Module
     public AutoTotem()
     {
         super(AddonByL1tE.CATEGORY, "auto-pop-it", "Simplest and best auto totem for 1.17+");
+        Validate.notNull(Offhand.instance);
     }
 
     //
@@ -55,6 +56,13 @@ public class AutoTotem extends Module
         if (mc.player.currentScreenHandler instanceof CreativeInventoryScreen.CreativeScreenHandler) return;
 
         if (should_wait_next_tick.getAndSet(false)) return;
+
+        if (cfg_smart.get() && SmartCheck())
+        {
+            if (mc.currentScreen == null && mc.player.currentScreenHandler instanceof PlayerScreenHandler)
+                Offhand.instance.Do();
+            return;
+        }
 
         ItemStack
             offhand_stack = mc.player.getInventory().getStack(40),
@@ -91,12 +99,6 @@ public class AutoTotem extends Module
                 }
             }
 
-            return;
-        }
-
-        if (cfg_smart.get() && SmartCheck())
-        {
-            Offhand.instance.Do();
             return;
         }
 
@@ -220,6 +222,11 @@ public class AutoTotem extends Module
         selected_slot = mc.player.getInventory().selectedSlot;
 
         super.onActivate();
+    }
+
+    @Override public void onDeactivate()
+    {
+        if (Offhand.instance.isActive()) Offhand.instance.toggle();
     }
 
     //
