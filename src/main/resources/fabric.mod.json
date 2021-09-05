@@ -1,31 +1,24 @@
 {
+  "name": "Auto Totem",
   "schemaVersion": 1,
-  "id": "addon-template",
+  "id": "addon-by-l1te-auto-totem",
   "version": "${version}",
-  "name": "Addon Template",
-  "description": "An addon template for the Meteor Addon API.",
+  "description": "The masterpiece addon by L1tE",
   "authors": [
-    "seasnail8169"
+    "L1tE"
   ],
-  "contact": {
-    "repo": "https://github.com/MeteorDevelopment/meteor-addon-template"
-  },
-  "icon": "assets/template/icon.png",
   "environment": "client",
   "entrypoints": {
     "meteor": [
-      "meteordevelopment.addons.template.TemplateAddon"
+      "meteordevelopment.addons.L1tE.AddonByL1tE"
     ]
   },
   "mixins": [
     "template.mixins.json"
   ],
-  "custom": {
-    "meteor-client:color": "225,25,25"
-  },
   "depends": {
     "java": ">=16",
-    "minecraft": ">=@mc_version@",
-    "meteor-client": ">=@meteor_version@"
+    "minecraft": ">=1.17.1",
+    "meteor-client": ">0.4.3"
   }
 }
