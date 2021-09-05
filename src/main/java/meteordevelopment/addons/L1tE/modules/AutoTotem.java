@@ -94,7 +94,11 @@ public class AutoTotem extends Module
             return;
         }
 
-        if (cfg_smart.get() && SmartCheck()) return;
+        if (cfg_smart.get() && SmartCheck())
+        {
+            Offhand.instance.Do();
+            return;
+        }
 
         if (is_holding_totem && can_click_offhand)
         {
@@ -269,7 +273,7 @@ public class AutoTotem extends Module
         Validate.notNull(mc.world);
 
         if (mc.player.isFallFlying()) return false; // TODO: return false only when speed is enough too pop totem
-        if (GetLatency() * 4 >= 500) return false;  // TODO: assume TPS: 10 * interval_per_tick instead of 500
+        if (GetLatency() >= 125) return false;  // TODO: assume TPS: 2.5 * interval_per_tick instead of 125
 
         float health = GetHealth();
         if (health < 10.f) return false;
