@@ -1,6 +1,7 @@
 package meteordevelopment.addons.L1tE;
 
 import meteordevelopment.addons.L1tE.modules.AutoTotem;
+import meteordevelopment.addons.L1tE.modules.Offhand;
 import meteordevelopment.meteorclient.MeteorAddon;
 import meteordevelopment.meteorclient.MeteorClient;
 import meteordevelopment.meteorclient.systems.modules.Category;
@@ -21,6 +22,7 @@ public class AddonByL1tE extends MeteorAddon
             (MethodHandles.Lookup) lookupInMethod.invoke(null, klass, MethodHandles.lookup()));
 
 		// Modules
+        Modules.get().add(new Offhand());
 		Modules.get().add(new AutoTotem());
 	}
 
