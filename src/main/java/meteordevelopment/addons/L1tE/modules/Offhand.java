@@ -6,7 +6,7 @@ import meteordevelopment.meteorclient.systems.modules.Module;
 public class Offhand extends Module
 {
     public static Offhand instance;
-    
+
     public Offhand()
     {
         super(AddonByL1tE.CATEGORY, "offhand",
