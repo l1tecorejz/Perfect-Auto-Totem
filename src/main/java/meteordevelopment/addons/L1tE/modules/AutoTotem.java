@@ -5,16 +5,14 @@ import meteordevelopment.meteorclient.events.game.GameLeftEvent;
 import meteordevelopment.meteorclient.events.packets.PacketEvent;
 import meteordevelopment.meteorclient.events.world.TickEvent;
 import meteordevelopment.meteorclient.mixininterface.IExplosion;
-import meteordevelopment.meteorclient.settings.BoolSetting;
-import meteordevelopment.meteorclient.settings.EnumSetting;
-import meteordevelopment.meteorclient.settings.Setting;
-import meteordevelopment.meteorclient.settings.SettingGroup;
+import meteordevelopment.meteorclient.settings.*;
 import meteordevelopment.meteorclient.systems.modules.Module;
 import meteordevelopment.orbit.EventHandler;
 import net.minecraft.client.gui.screen.ingame.CreativeInventoryScreen;
 import net.minecraft.client.gui.screen.ingame.HandledScreen;
 import net.minecraft.client.network.PlayerListEntry;
 import net.minecraft.enchantment.EnchantmentHelper;
+import net.minecraft.entity.attribute.EntityAttributeInstance;
 import net.minecraft.entity.attribute.EntityAttributes;
 import net.minecraft.entity.damage.DamageSource;
 import net.minecraft.entity.effect.StatusEffects;
@@ -306,14 +304,17 @@ public class AutoTotem extends Module
 
         damage *= resistance_coefficient;
 
-        float f = 2.0F + (float) Objects.requireNonNull
-            (mc.player.getAttributeInstance(EntityAttributes.GENERIC_ARMOR_TOUGHNESS)).getValue() / 4.0F;
+        EntityAttributeInstance attribute_instance =
+            mc.player.getAttributeInstance(EntityAttributes.GENERIC_ARMOR_TOUGHNESS);
+        Validate.notNull(attribute_instance);
+
+        float f = 2.0F + (float) attribute_instance.getValue() / 4.0F;
         float g = (float) MathHelper.clamp((float) mc.player.getArmor() - damage / f,
             (float) mc.player.getArmor() * 0.2F, 20.0F);
         damage *= 1 - g / 25.0F;
 
         // Reduce by enchants
-        ((IExplosion) explosion).set(mc.player.getPos(), 6.0F, false);
+        ((IExplosion) explosion).set(mc.player.getPos()/*.add(0, 0.25d, 0)*/, 6.0F, false);
 
         int protLevel =
             EnchantmentHelper.getProtectionAmount(mc.player.getArmorItems(), DamageSource.explosion(explosion));
@@ -321,7 +322,7 @@ public class AutoTotem extends Module
 
         damage *= 1 - (protLevel / 25.0);
 
-        return health - damage > 1.f;
+        return health - damage > 2.0F;
     }
 
     private float GetHealth()
@@ -375,4 +376,11 @@ public class AutoTotem extends Module
         .defaultValue(false)
         .build()
     );
+
+    /*private final Setting<Integer> cfg_health = sg_general.add(new IntSetting.Builder()
+        .name("health")
+        .defaultValue(1)
+        .visible(cfg_smart::get)
+        .build()
+    );*/
 }
