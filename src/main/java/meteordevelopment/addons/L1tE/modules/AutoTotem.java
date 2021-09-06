@@ -5,7 +5,10 @@ import meteordevelopment.meteorclient.events.game.GameLeftEvent;
 import meteordevelopment.meteorclient.events.packets.PacketEvent;
 import meteordevelopment.meteorclient.events.world.TickEvent;
 import meteordevelopment.meteorclient.mixininterface.IExplosion;
-import meteordevelopment.meteorclient.settings.*;
+import meteordevelopment.meteorclient.settings.BoolSetting;
+import meteordevelopment.meteorclient.settings.EnumSetting;
+import meteordevelopment.meteorclient.settings.Setting;
+import meteordevelopment.meteorclient.settings.SettingGroup;
 import meteordevelopment.meteorclient.systems.modules.Module;
 import meteordevelopment.orbit.EventHandler;
 import net.minecraft.client.gui.screen.ingame.CreativeInventoryScreen;
@@ -23,6 +26,7 @@ import net.minecraft.item.Items;
 import net.minecraft.network.packet.c2s.play.ClickSlotC2SPacket;
 import net.minecraft.network.packet.c2s.play.PlayerActionC2SPacket;
 import net.minecraft.network.packet.c2s.play.UpdateSelectedSlotC2SPacket;
+import net.minecraft.network.packet.s2c.play.EntityStatusS2CPacket;
 import net.minecraft.network.packet.s2c.play.UpdateSelectedSlotS2CPacket;
 import net.minecraft.screen.PlayerScreenHandler;
 import net.minecraft.screen.slot.Slot;
@@ -40,7 +44,7 @@ public class AutoTotem extends Module
 {
     public AutoTotem()
     {
-        super(AddonByL1tE.CATEGORY, "auto-pop-it", "Simplest and best auto totem for 1.17+");
+        super(AddonByL1tE.CATEGORY, "auto-pop-it", "Best auto totem for 1.17+");
         Validate.notNull(Offhand.instance);
     }
 
@@ -57,7 +61,8 @@ public class AutoTotem extends Module
 
         if (cfg_smart.get() && SmartCheck())
         {
-            if (mc.currentScreen == null && mc.player.currentScreenHandler instanceof PlayerScreenHandler)
+            if (!(mc.currentScreen instanceof HandledScreen) &&
+                mc.player.currentScreenHandler instanceof PlayerScreenHandler)
                 Offhand.instance.Do();
             return;
         }
@@ -121,8 +126,7 @@ public class AutoTotem extends Module
             if (is_holding_totem)
             {
                 mc.interactionManager.clickSlot(mc.player.currentScreenHandler.syncId,
-                    selected_slot + mc.player.currentScreenHandler.slots.size() - 9,
-                    0, SlotActionType.PICKUP, mc.player);
+                    Idx2Id(selected_slot), 0, SlotActionType.PICKUP, mc.player);
                 return;
             }
         }
@@ -143,8 +147,7 @@ public class AutoTotem extends Module
                 }
 
                 mc.interactionManager.clickSlot(mc.player.currentScreenHandler.syncId,
-                    selected_slot + mc.player.currentScreenHandler.slots.size() - 9,
-                    0, SlotActionType.PICKUP, mc.player);
+                    Idx2Id(selected_slot), 0, SlotActionType.PICKUP, mc.player);
             }
             return;
         }
@@ -205,7 +208,18 @@ public class AutoTotem extends Module
 
     @EventHandler private void onPacketReceived(PacketEvent.Receive event)
     {
-        if (event.packet instanceof UpdateSelectedSlotS2CPacket packet)
+        Validate.notNull(mc.player);
+
+        if (event.packet instanceof EntityStatusS2CPacket packet)
+        {
+            if (mc.player.currentScreenHandler instanceof PlayerScreenHandler) return;
+            if (packet.getStatus() != 35 || packet.getEntity(mc.world) != mc.player) return;
+
+            if (mc.player.getMainHandStack().getItem() != Items.TOTEM_OF_UNDYING && // inaccurate
+                mc.player.getOffHandStack().getItem() == Items.TOTEM_OF_UNDYING)
+                mc.player.getOffHandStack().decrement(1);
+        }
+        else if (event.packet instanceof UpdateSelectedSlotS2CPacket packet)
         {
             // TODO: fix small desync
             selected_slot = packet.getSlot();
@@ -222,20 +236,14 @@ public class AutoTotem extends Module
         super.onActivate();
     }
 
-    @Override public void onDeactivate()
-    {
-        if (Offhand.instance.isActive()) Offhand.instance.toggle();
-    }
-
     //
 
     private int GetTotemId()
     {
         Validate.notNull(mc.player);
 
-        for (int i = 0; i < 45; ++i)
+        for (int i = 0; i < 9; ++i)
         {
-            if (i == 40) continue;
             Item item = mc.player.getInventory().getStack(i).getItem();
             if (item != Items.TOTEM_OF_UNDYING) continue;
             return Idx2Id(i);
@@ -243,7 +251,6 @@ public class AutoTotem extends Module
 
         for (Slot slot : mc.player.currentScreenHandler.slots)
         {
-            if (slot.id == 45) continue;
             if (slot.getStack().getItem() != Items.TOTEM_OF_UNDYING) continue;
             return slot.id;
         }
@@ -283,7 +290,7 @@ public class AutoTotem extends Module
         float health = GetHealth();
         if (health < 10.f) return false;
 
-        if(mc.player.fallDistance > 3.f && health - mc.player.fallDistance * 0.5 <= 1.f) return false;
+        if (mc.player.fallDistance > 3.f && health - mc.player.fallDistance * 0.5 <= 2.0F) return false;
 
         double resistance_coefficient = 1.d;
         if (mc.player.hasStatusEffect(StatusEffects.RESISTANCE))
@@ -314,7 +321,7 @@ public class AutoTotem extends Module
         damage *= 1 - g / 25.0F;
 
         // Reduce by enchants
-        ((IExplosion) explosion).set(mc.player.getPos()/*.add(0, 0.25d, 0)*/, 6.0F, false);
+        ((IExplosion) explosion).set(mc.player.getPos(), 6.0F, false);
 
         int protLevel =
             EnchantmentHelper.getProtectionAmount(mc.player.getArmorItems(), DamageSource.explosion(explosion));
@@ -376,11 +383,4 @@ public class AutoTotem extends Module
         .defaultValue(false)
         .build()
     );
-
-    /*private final Setting<Integer> cfg_health = sg_general.add(new IntSetting.Builder()
-        .name("health")
-        .defaultValue(1)
-        .visible(cfg_smart::get)
-        .build()
-    );*/
 }
