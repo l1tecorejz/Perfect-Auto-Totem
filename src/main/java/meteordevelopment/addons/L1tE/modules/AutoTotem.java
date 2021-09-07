@@ -69,9 +69,8 @@ public class AutoTotem extends Module
             offhand_stack = mc.player.getInventory().getStack(40),
             cursor_stack = mc.player.currentScreenHandler.getCursorStack();
 
-        final boolean
-            is_holding_totem = cursor_stack.getItem() == Items.TOTEM_OF_UNDYING,
-            can_click_offhand = mc.player.currentScreenHandler instanceof PlayerScreenHandler;
+        final boolean is_holding_totem = cursor_stack.getItem() == Items.TOTEM_OF_UNDYING;
+        boolean can_click_offhand = mc.player.currentScreenHandler instanceof PlayerScreenHandler;
 
         if (offhand_stack.getItem() == Items.TOTEM_OF_UNDYING)
         {
@@ -101,6 +100,12 @@ public class AutoTotem extends Module
             return;
         }
 
+        if (!can_click_offhand && cfg_close_screen.get())
+        {
+            mc.player.closeHandledScreen();
+            can_click_offhand = true;
+        }
+
         if (is_holding_totem && can_click_offhand)
         {
             Click(45);
@@ -112,7 +117,6 @@ public class AutoTotem extends Module
             ItemStack mainhand_stack = mc.player.getInventory().getStack(selected_slot);
             if (mainhand_stack.getItem() == Items.TOTEM_OF_UNDYING)
             {
-                if (cfg_close_screen.get()) mc.player.closeHandledScreen();
                 mc.player.networkHandler.sendPacket(new PlayerActionC2SPacket
                     (PlayerActionC2SPacket.Action.SWAP_ITEM_WITH_OFFHAND, BlockPos.ORIGIN, Direction.DOWN));
                 return;
@@ -326,7 +330,6 @@ public class AutoTotem extends Module
 
     private final Setting<Boolean> cfg_close_screen = sg_general.add(new BoolSetting.Builder()
         .name("close-screen")
-        .visible(() -> cfg_version.get() == Versions.one_dot_12)
         .description("Closes any screen while putting totem in offhand.")
         .defaultValue(true)
         .build());
