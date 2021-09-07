@@ -19,7 +19,6 @@ import net.minecraft.entity.attribute.EntityAttributeInstance;
 import net.minecraft.entity.attribute.EntityAttributes;
 import net.minecraft.entity.damage.DamageSource;
 import net.minecraft.entity.effect.StatusEffects;
-import net.minecraft.entity.player.PlayerInventory;
 import net.minecraft.item.Item;
 import net.minecraft.item.ItemStack;
 import net.minecraft.item.Items;
@@ -30,7 +29,6 @@ import net.minecraft.network.packet.s2c.play.EntityStatusS2CPacket;
 import net.minecraft.network.packet.s2c.play.UpdateSelectedSlotS2CPacket;
 import net.minecraft.screen.PlayerScreenHandler;
 import net.minecraft.screen.slot.Slot;
-import net.minecraft.screen.slot.SlotActionType;
 import net.minecraft.util.math.BlockPos;
 import net.minecraft.util.math.Direction;
 import net.minecraft.util.math.MathHelper;
@@ -40,6 +38,9 @@ import org.apache.commons.lang3.Validate;
 import java.util.Objects;
 import java.util.concurrent.atomic.AtomicBoolean;
 
+import static meteordevelopment.addons.L1tE.utils.inv.*;
+
+@SuppressWarnings("ConstantConditions")
 public class AutoTotem extends Module
 {
     public AutoTotem()
@@ -52,14 +53,11 @@ public class AutoTotem extends Module
 
     @EventHandler private void onTickPre(TickEvent.Pre event)
     {
-        Validate.notNull(mc.player);
-        Validate.notNull(mc.interactionManager);
-
         if (mc.player.currentScreenHandler instanceof CreativeInventoryScreen.CreativeScreenHandler) return;
 
         if (should_wait_next_tick.getAndSet(false)) return;
 
-        if (cfg_smart.get() && SmartCheck())
+        if (Offhand.instance.isActive() && SmartCheck())
         {
             if (!(mc.currentScreen instanceof HandledScreen) &&
                 mc.player.currentScreenHandler instanceof PlayerScreenHandler)
@@ -82,8 +80,7 @@ public class AutoTotem extends Module
                 final int totem_id = GetTotemId();
                 if (totem_id == -1) return;
 
-                mc.interactionManager.clickSlot(mc.player.currentScreenHandler.syncId,
-                    totem_id, 40, SlotActionType.SWAP, mc.player);
+                Swap(totem_id, 40);
 
                 should_override_totem = false;
                 return;
@@ -96,8 +93,7 @@ public class AutoTotem extends Module
                     ItemStack stack = mc.player.getInventory().getStack(i);
                     if (!stack.isEmpty()) continue;
 
-                    mc.interactionManager.clickSlot(mc.player.currentScreenHandler.syncId,
-                        Idx2Id(i), 0, SlotActionType.PICKUP, mc.player);
+                    Click(Idx2Id(i));
                     return;
                 }
             }
@@ -107,8 +103,7 @@ public class AutoTotem extends Module
 
         if (is_holding_totem && can_click_offhand)
         {
-            mc.interactionManager.clickSlot(mc.player.currentScreenHandler.syncId, 45, 0,
-                SlotActionType.PICKUP, mc.player);
+            Click(45);
             return;
         }
 
@@ -125,8 +120,7 @@ public class AutoTotem extends Module
 
             if (is_holding_totem)
             {
-                mc.interactionManager.clickSlot(mc.player.currentScreenHandler.syncId,
-                    Idx2Id(selected_slot), 0, SlotActionType.PICKUP, mc.player);
+                Click(Idx2Id(selected_slot));
                 return;
             }
         }
@@ -141,35 +135,28 @@ public class AutoTotem extends Module
                     ItemStack stack = mc.player.getInventory().getStack(i);
                     if (!stack.isEmpty()) continue;
 
-                    mc.interactionManager.clickSlot(mc.player.currentScreenHandler.syncId,
-                        Idx2Id(i), 0, SlotActionType.PICKUP, mc.player);
+                    Click(Idx2Id(i));
                     return;
                 }
 
-                mc.interactionManager.clickSlot(mc.player.currentScreenHandler.syncId,
-                    Idx2Id(selected_slot), 0, SlotActionType.PICKUP, mc.player);
+                Click(Idx2Id(selected_slot));
             }
             return;
         }
 
         if (cfg_version.get() == Versions.one_dot_12)
         {
-            mc.interactionManager.clickSlot(mc.player.currentScreenHandler.syncId,
-                totem_id, 0, SlotActionType.PICKUP, mc.player);
+            Click(totem_id);
             return;
         }
 
-        mc.interactionManager.clickSlot(mc.player.currentScreenHandler.syncId,
-            totem_id, 40, SlotActionType.SWAP, mc.player);
+        Swap(totem_id, 40);
 
         should_override_totem = true;
     }
 
     @EventHandler private void onEzLog(GameLeftEvent event)
     {
-        Validate.notNull(mc.player);
-        Validate.notNull(mc.interactionManager);
-
         int totem_id = GetTotemId();
         if (totem_id == -1) return;
 
@@ -181,14 +168,12 @@ public class AutoTotem extends Module
 
         // TODO: make this shit smarter
 
-        mc.interactionManager.clickSlot(mc.player.currentScreenHandler.syncId,
-            totem_id, selected_slot, SlotActionType.SWAP, mc.player);
+        Swap(totem_id, selected_slot);
 
         totem_id = GetTotemId();
         if (totem_id == -1) return;
 
-        mc.interactionManager.clickSlot(mc.player.currentScreenHandler.syncId,
-            totem_id, 40, SlotActionType.SWAP, mc.player);
+        Swap(totem_id, 40);
     }
 
     @EventHandler private void onPacketSent(PacketEvent.Sent event)
@@ -208,8 +193,6 @@ public class AutoTotem extends Module
 
     @EventHandler private void onPacketReceived(PacketEvent.Receive event)
     {
-        Validate.notNull(mc.player);
-
         if (event.packet instanceof EntityStatusS2CPacket packet)
         {
             if (mc.player.currentScreenHandler instanceof PlayerScreenHandler) return;
@@ -228,8 +211,6 @@ public class AutoTotem extends Module
 
     @Override public void onActivate()
     {
-        Validate.notNull(mc.player);
-
         should_override_totem = true;
         selected_slot = mc.player.getInventory().selectedSlot;
 
@@ -240,8 +221,6 @@ public class AutoTotem extends Module
 
     private int GetTotemId()
     {
-        Validate.notNull(mc.player);
-
         for (int i = 0; i < 9; ++i)
         {
             Item item = mc.player.getInventory().getStack(i).getItem();
@@ -258,32 +237,11 @@ public class AutoTotem extends Module
         return -1;
     }
 
-    private int Idx2Id(int idx)
-    {
-        Validate.notNull(mc.player);
-
-        if (mc.player.currentScreenHandler instanceof PlayerScreenHandler)
-        {
-            if (PlayerInventory.isValidHotbarIndex(idx)) return idx + 36;
-            if (idx >= 9 && idx < 36) return idx;
-        }
-        else
-        {
-            if (PlayerInventory.isValidHotbarIndex(idx)) return idx + mc.player.currentScreenHandler.slots.size() - 9;
-            if (idx >= 9 && idx < 36) return idx + mc.player.currentScreenHandler.slots.size() - 45;
-        }
-
-        return -1;
-    }
-
     private static final double cry_damage = (float)((int)((1 + 1) / 2.0D * 7.0D * 12.0D + 1.0D));
     private static final Explosion explosion = new Explosion
         (null, null, 0, 0, 0, 6.0F, false, Explosion.DestructionType.DESTROY);
     private boolean SmartCheck()
     {
-        Validate.notNull(mc.player);
-        Validate.notNull(mc.world);
-
         if (mc.player.isFallFlying()) return false; // TODO: return false only when speed is enough too pop totem
         if (GetLatency() >= 125) return false;  // TODO: assume TPS: 2.5 * interval_per_tick instead of 125
 
@@ -334,13 +292,11 @@ public class AutoTotem extends Module
 
     private float GetHealth()
     {
-        Validate.notNull(mc.player);
         return mc.player.getHealth() + mc.player.getAbsorptionAmount(); // TODO: fix ghost absorption
     }
 
     private long GetLatency()   // TODO: need more accurate latency calculation
     {
-        Validate.notNull(mc.player);
         PlayerListEntry playerListEntry = mc.player.networkHandler.getPlayerListEntry(mc.player.getUuid());
         return playerListEntry != null ? playerListEntry.getLatency() : 0L;
     }
@@ -366,21 +322,12 @@ public class AutoTotem extends Module
         .name("minecraft-version")
         .description("Rly best only on 1.17+!")
         .defaultValue(Versions.one_dot_17)
-        .build()
-    );
+        .build());
 
     private final Setting<Boolean> cfg_close_screen = sg_general.add(new BoolSetting.Builder()
         .name("close-screen")
         .visible(() -> cfg_version.get() == Versions.one_dot_12)
         .description("Closes any screen while putting totem in offhand.")
         .defaultValue(true)
-        .build()
-    );
-
-    private final Setting<Boolean> cfg_smart = sg_general.add(new BoolSetting.Builder()
-        .name("smart")
-        .description("Allows you to use offhand when you have enough hp.")
-        .defaultValue(false)
-        .build()
-    );
+        .build());
 }
