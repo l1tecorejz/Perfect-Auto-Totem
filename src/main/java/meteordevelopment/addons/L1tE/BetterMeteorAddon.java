@@ -10,7 +10,7 @@ import net.minecraft.item.Items;
 
 import java.lang.invoke.MethodHandles;
 
-public class AddonByL1tE extends MeteorAddon
+public class BetterMeteorAddon extends MeteorAddon
 {
     public static final Category CATEGORY = new Category("l1tecorejz'",
         Items.TOTEM_OF_UNDYING.getDefaultStack());
