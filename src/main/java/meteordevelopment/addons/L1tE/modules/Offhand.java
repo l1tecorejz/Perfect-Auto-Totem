@@ -1,29 +1,27 @@
 package meteordevelopment.addons.L1tE.modules;
 
-import meteordevelopment.addons.L1tE.AddonByL1tE;
+import meteordevelopment.addons.L1tE.BetterMeteorAddon;
 import meteordevelopment.meteorclient.systems.modules.Module;
 import net.minecraft.item.Item;
 import net.minecraft.item.Items;
 import net.minecraft.screen.slot.Slot;
-import net.minecraft.screen.slot.SlotActionType;
-import org.apache.commons.lang3.Validate;
 
+import static meteordevelopment.addons.L1tE.utils.inv.Swap;
+
+@SuppressWarnings("ConstantConditions")
 public class Offhand extends Module
 {
     public static Offhand instance;
 
     public Offhand()
     {
-        super(AddonByL1tE.CATEGORY, "offhand",
+        super(BetterMeteorAddon.CATEGORY, "offhand",
             "Working only with auto totem in smart mode.");
         instance = this;
     }
 
     public void Do()
     {
-        Validate.notNull(mc.player);
-        Validate.notNull(mc.interactionManager);
-
         if (!isActive()) return;
 
         final Item
@@ -49,7 +47,6 @@ public class Offhand extends Module
 
         // TODO: add 1.12.2 mode
 
-        mc.interactionManager.clickSlot(mc.player.currentScreenHandler.syncId,
-            crystal_id, 40, SlotActionType.SWAP, mc.player);
+        Swap(crystal_id, 40);
     }
 }
