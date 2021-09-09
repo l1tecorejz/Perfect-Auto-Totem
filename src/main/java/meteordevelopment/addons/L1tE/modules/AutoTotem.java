@@ -1,6 +1,6 @@
 package meteordevelopment.addons.L1tE.modules;
 
-import meteordevelopment.addons.L1tE.AddonByL1tE;
+import meteordevelopment.addons.L1tE.BetterMeteorAddon;
 import meteordevelopment.meteorclient.events.game.GameLeftEvent;
 import meteordevelopment.meteorclient.events.packets.PacketEvent;
 import meteordevelopment.meteorclient.events.world.TickEvent;
@@ -35,7 +35,6 @@ import net.minecraft.util.math.MathHelper;
 import net.minecraft.world.explosion.Explosion;
 import org.apache.commons.lang3.Validate;
 
-import java.util.Objects;
 import java.util.concurrent.atomic.AtomicBoolean;
 
 import static meteordevelopment.addons.L1tE.utils.inv.*;
@@ -45,7 +44,7 @@ public class AutoTotem extends Module
 {
     public AutoTotem()
     {
-        super(AddonByL1tE.CATEGORY, "auto-pop-it", "Best auto totem for 1.17+");
+        super(BetterMeteorAddon.CATEGORY, "auto-pop-it", "Best auto totem for 1.17+");
         Validate.notNull(Offhand.instance);
     }
 
@@ -69,23 +68,15 @@ public class AutoTotem extends Module
             offhand_stack = mc.player.getInventory().getStack(40),
             cursor_stack = mc.player.currentScreenHandler.getCursorStack();
 
-        final boolean is_holding_totem = cursor_stack.getItem() == Items.TOTEM_OF_UNDYING;
+        final boolean
+            is_holding_totem = cursor_stack.getItem() == Items.TOTEM_OF_UNDYING,
+            is_totem_in_offhand = offhand_stack.getItem() == Items.TOTEM_OF_UNDYING;
         boolean can_click_offhand = mc.player.currentScreenHandler instanceof PlayerScreenHandler;
 
-        if (offhand_stack.getItem() == Items.TOTEM_OF_UNDYING)
+        if (is_totem_in_offhand && !ShouldOverrideTotem())
         {
-            if (should_override_totem && cfg_version.get() == Versions.one_dot_16)
-            {
-                final int totem_id = GetTotemId();
-                if (totem_id == -1) return;
-
-                Swap(totem_id, 40);
-
-                should_override_totem = false;
-                return;
-            }
-
-            if (!(mc.currentScreen instanceof HandledScreen) && is_holding_totem)
+            if (cfg_version.get() != Versions.one_dot_12 &&
+                !(mc.currentScreen instanceof HandledScreen) && is_holding_totem)
             {
                 for (int i = 0; i < 36; ++i)
                 {
@@ -156,7 +147,7 @@ public class AutoTotem extends Module
 
         Swap(totem_id, 40);
 
-        should_override_totem = true;
+        should_override_totem = !is_totem_in_offhand;
     }
 
     @EventHandler private void onEzLog(GameLeftEvent event)
@@ -241,6 +232,13 @@ public class AutoTotem extends Module
         return -1;
     }
 
+    private boolean ShouldOverrideTotem()
+    {
+        return should_override_totem && (cfg_version.get() == Versions.one_dot_16 ||
+            (!(mc.player.currentScreenHandler instanceof PlayerScreenHandler) &&
+                cfg_version.get() == Versions.one_dot_17));
+    }
+
     private static final double cry_damage = (float)((int)((1 + 1) / 2.0D * 7.0D * 12.0D + 1.0D));
     private static final Explosion explosion = new Explosion
         (null, null, 0, 0, 0, 6.0F, false, Explosion.DestructionType.DESTROY);
@@ -252,14 +250,13 @@ public class AutoTotem extends Module
         float health = GetHealth();
         if (health < 10.f) return false;
 
+        // TODO: fix delayed fall damage
         if (mc.player.fallDistance > 3.f && health - mc.player.fallDistance * 0.5 <= 2.0F) return false;
 
         double resistance_coefficient = 1.d;
         if (mc.player.hasStatusEffect(StatusEffects.RESISTANCE))
         {
-            resistance_coefficient -= ((Objects.requireNonNull
-                    (mc.player.getStatusEffect(StatusEffects.RESISTANCE)).getAmplifier() + 1) * 0.2);
-
+            resistance_coefficient -= (mc.player.getStatusEffect(StatusEffects.RESISTANCE).getAmplifier() + 1) * 0.2;
             if (resistance_coefficient <= 0.d) return true;
         }
 
@@ -275,7 +272,6 @@ public class AutoTotem extends Module
 
         EntityAttributeInstance attribute_instance =
             mc.player.getAttributeInstance(EntityAttributes.GENERIC_ARMOR_TOUGHNESS);
-        Validate.notNull(attribute_instance);
 
         float f = 2.0F + (float) attribute_instance.getValue() / 4.0F;
         float g = (float) MathHelper.clamp((float) mc.player.getArmor() - damage / f,
@@ -323,14 +319,14 @@ public class AutoTotem extends Module
     }
 
     private final Setting<Versions> cfg_version = sg_general.add(new EnumSetting.Builder<Versions>()
-        .name("minecraft-version")
+        .name("minecraft-server-version")
         .description("Rly best only on 1.17+!")
         .defaultValue(Versions.one_dot_17)
         .build());
 
     private final Setting<Boolean> cfg_close_screen = sg_general.add(new BoolSetting.Builder()
         .name("close-screen")
-        .description("Closes any screen while putting totem in offhand.")
-        .defaultValue(true)
+        .description("Closes any screen handler while putting totem in offhand.")
+        .defaultValue(false)
         .build());
 }
