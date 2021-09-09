@@ -5,6 +5,7 @@ import net.minecraft.entity.player.PlayerInventory;
 import net.minecraft.screen.PlayerScreenHandler;
 import net.minecraft.screen.slot.SlotActionType;
 
+@SuppressWarnings("ConstantConditions")
 public class inv
 {
     private static final MinecraftClient mc = MinecraftClient.getInstance();
