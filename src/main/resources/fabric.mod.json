@@ -1,7 +1,7 @@
 {
-  "name": "Auto Totem",
+  "name": "Perfect Auto Totem",
   "schemaVersion": 1,
-  "id": "addon-by-l1te-auto-totem",
+  "id": "the-perfect-auto-totem",
   "version": "${version}",
   "description": "The masterpiece addon by L1tE",
   "authors": [
@@ -10,7 +10,7 @@
   "environment": "client",
   "entrypoints": {
     "meteor": [
-      "meteordevelopment.addons.L1tE.AddonByL1tE"
+      "meteordevelopment.addons.L1tE.BetterMeteorAddon"
     ]
   },
   "mixins": [
