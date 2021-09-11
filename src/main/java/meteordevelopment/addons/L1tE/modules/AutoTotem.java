@@ -91,6 +91,9 @@ public class AutoTotem extends Module
             return;
         }
 
+        final int totem_id = GetTotemId();
+        if (totem_id == -1 && !is_holding_totem) return;
+
         if (!can_click_offhand && cfg_close_screen.get())
         {
             mc.player.closeHandledScreen();
@@ -120,7 +123,6 @@ public class AutoTotem extends Module
             }
         }
 
-        final int totem_id = GetTotemId();
         if (totem_id == -1)
         {
             if (is_holding_totem)
@@ -248,7 +250,7 @@ public class AutoTotem extends Module
         if (GetLatency() >= 125) return false;  // TODO: assume TPS: 2.5 * interval_per_tick instead of 125
 
         float health = GetHealth();
-        if (health < 10.f) return false;
+        if (health < 10.0F) return false;
 
         // TODO: fix delayed fall damage
         if (mc.player.fallDistance > 3.f && health - mc.player.fallDistance * 0.5 <= 2.0F) return false;
