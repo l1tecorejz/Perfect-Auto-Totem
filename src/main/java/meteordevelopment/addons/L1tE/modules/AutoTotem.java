@@ -19,7 +19,6 @@ import net.minecraft.entity.attribute.EntityAttributeInstance;
 import net.minecraft.entity.attribute.EntityAttributes;
 import net.minecraft.entity.damage.DamageSource;
 import net.minecraft.entity.effect.StatusEffects;
-import net.minecraft.item.Item;
 import net.minecraft.item.ItemStack;
 import net.minecraft.item.Items;
 import net.minecraft.network.packet.c2s.play.ClickSlotC2SPacket;
@@ -42,9 +41,12 @@ import static meteordevelopment.addons.L1tE.utils.inv.*;
 @SuppressWarnings("ConstantConditions")
 public class AutoTotem extends Module
 {
+    public static AutoTotem instance;
+
     public AutoTotem()
     {
         super(BetterMeteorAddon.CATEGORY, "auto-pop-it", "Best auto totem for 1.17+");
+        instance = this;
         Validate.notNull(Offhand.instance);
     }
 
@@ -75,15 +77,15 @@ public class AutoTotem extends Module
 
         if (is_totem_in_offhand && !ShouldOverrideTotem())
         {
-            if (cfg_version.get() != Versions.one_dot_12 &&
-                !(mc.currentScreen instanceof HandledScreen) && is_holding_totem)
+            if (!(mc.currentScreen instanceof HandledScreen) &&
+                (should_click_blank || (cfg_version.get() != Versions.one_dot_12 && is_holding_totem)))
             {
-                for (int i = 0; i < 36; ++i)
-                {
-                    ItemStack stack = mc.player.getInventory().getStack(i);
-                    if (!stack.isEmpty()) continue;
+                should_click_blank = false;
 
-                    Click(Idx2Id(i));
+                for (Slot slot : mc.player.currentScreenHandler.slots)
+                {
+                    if (!slot.getStack().isEmpty()) continue;
+                    Click(slot.id);
                     return;
                 }
             }
@@ -118,7 +120,7 @@ public class AutoTotem extends Module
 
             if (is_holding_totem)
             {
-                Click(Idx2Id(selected_slot));
+                Click(GetFirstHotbarSlotId() + selected_slot);
                 return;
             }
         }
@@ -127,16 +129,14 @@ public class AutoTotem extends Module
         {
             if (is_holding_totem)
             {
-                for (int i = 0; i < 36; ++i)
+                for (Slot slot : mc.player.currentScreenHandler.slots)
                 {
-                    ItemStack stack = mc.player.getInventory().getStack(i);
-                    if (!stack.isEmpty()) continue;
-
-                    Click(Idx2Id(i));
+                    if (!slot.getStack().isEmpty()) continue;
+                    Click(slot.id);
                     return;
                 }
 
-                Click(Idx2Id(selected_slot));
+                Click(GetFirstHotbarSlotId() + selected_slot);
             }
             return;
         }
@@ -144,6 +144,7 @@ public class AutoTotem extends Module
         if (cfg_version.get() == Versions.one_dot_12)
         {
             Click(totem_id);
+            should_click_blank = true;
             return;
         }
 
@@ -218,17 +219,17 @@ public class AutoTotem extends Module
 
     private int GetTotemId()
     {
-        for (int i = 0; i < 9; ++i)
+        final int hotbar_start = GetFirstHotbarSlotId();
+        for (int i = hotbar_start; i < hotbar_start + 9; ++i)
         {
-            Item item = mc.player.getInventory().getStack(i).getItem();
-            if (item != Items.TOTEM_OF_UNDYING) continue;
-            return Idx2Id(i);
+            if (mc.player.currentScreenHandler.getSlot(i).getStack().getItem() != Items.TOTEM_OF_UNDYING) continue;
+            return i;
         }
 
-        for (Slot slot : mc.player.currentScreenHandler.slots)
+        for (int i = 0; i < hotbar_start; ++i)
         {
-            if (slot.getStack().getItem() != Items.TOTEM_OF_UNDYING) continue;
-            return slot.id;
+            if (mc.player.currentScreenHandler.getSlot(i).getStack().getItem() != Items.TOTEM_OF_UNDYING) continue;
+            return i;
         }
 
         return -1;
@@ -244,7 +245,7 @@ public class AutoTotem extends Module
     private static final double cry_damage = (float)((int)((1 + 1) / 2.0D * 7.0D * 12.0D + 1.0D));
     private static final Explosion explosion = new Explosion
         (null, null, 0, 0, 0, 6.0F, false, Explosion.DestructionType.DESTROY);
-    private boolean SmartCheck()
+    private boolean SmartCheck()    // TODO: check wither explosion damage too
     {
         if (mc.player.isFallFlying()) return false; // TODO: return false only when speed is enough too pop totem
         if (GetLatency() >= 125) return false;  // TODO: assume TPS: 2.5 * interval_per_tick instead of 125
@@ -306,7 +307,7 @@ public class AutoTotem extends Module
     // vars
 
     private final AtomicBoolean should_wait_next_tick = new AtomicBoolean(false);
-    private boolean should_override_totem;
+    private boolean should_override_totem, should_click_blank;
     private int selected_slot = 0;
 
     // settings
@@ -320,9 +321,8 @@ public class AutoTotem extends Module
         one_dot_17
     }
 
-    private final Setting<Versions> cfg_version = sg_general.add(new EnumSetting.Builder<Versions>()
+    public final Setting<Versions> cfg_version = sg_general.add(new EnumSetting.Builder<Versions>()
         .name("minecraft-server-version")
-        .description("Rly best only on 1.17+!")
         .defaultValue(Versions.one_dot_17)
         .build());
 
