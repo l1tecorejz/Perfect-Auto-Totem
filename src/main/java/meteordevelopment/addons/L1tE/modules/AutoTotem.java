@@ -24,8 +24,7 @@ import net.minecraft.item.Items;
 import net.minecraft.network.packet.c2s.play.ClickSlotC2SPacket;
 import net.minecraft.network.packet.c2s.play.PlayerActionC2SPacket;
 import net.minecraft.network.packet.c2s.play.UpdateSelectedSlotC2SPacket;
-import net.minecraft.network.packet.s2c.play.EntityStatusS2CPacket;
-import net.minecraft.network.packet.s2c.play.UpdateSelectedSlotS2CPacket;
+import net.minecraft.network.packet.s2c.play.*;
 import net.minecraft.screen.PlayerScreenHandler;
 import net.minecraft.screen.slot.Slot;
 import net.minecraft.util.math.BlockPos;
@@ -204,6 +203,10 @@ public class AutoTotem extends Module
         {
             // TODO: fix small desync
             selected_slot = packet.getSlot();
+        }
+        else if (event.packet instanceof OpenScreenS2CPacket || event.packet instanceof CloseScreenS2CPacket)
+        {
+            should_override_totem = true;
         }
     }
 
