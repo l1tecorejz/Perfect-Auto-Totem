@@ -1,14 +1,12 @@
-package meteordevelopment.addons.L1tE.utils;
+package me.l1tecorejz.meteoraddons.pat.utils;
 
-import net.minecraft.client.MinecraftClient;
 import net.minecraft.screen.PlayerScreenHandler;
 import net.minecraft.screen.slot.SlotActionType;
 
-@SuppressWarnings("ConstantConditions")
+import static meteordevelopment.meteorclient.utils.Utils.mc;
+
 public class inv
 {
-    private static final MinecraftClient mc = MinecraftClient.getInstance();
-
     private static void ClickSlot(int id, int button, SlotActionType action)
     {
         mc.interactionManager.clickSlot(mc.player.currentScreenHandler.syncId, id, button, action, mc.player);

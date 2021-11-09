@@ -1,24 +1,30 @@
 {
-  "name": "Perfect Auto Totem",
   "schemaVersion": 1,
   "id": "the-perfect-auto-totem",
   "version": "${version}",
+  "name": "Perfect Auto Totem",
   "description": "The masterpiece addon by L1tE",
-  "authors": [
-    "L1tE"
-  ],
   "environment": "client",
   "entrypoints": {
     "meteor": [
-      "meteordevelopment.addons.L1tE.BetterMeteorAddon"
+      "me.l1tecorejz.meteoraddons.pat.PerfectAutoTotem"
     ]
   },
   "mixins": [
-    "template.mixins.json"
+    "pat.mixins.json"
   ],
   "depends": {
     "java": ">=16",
     "minecraft": ">=1.17.1",
     "meteor-client": ">0.4.3"
-  }
+  },
+  "authors": [
+    {
+      "name": "l1tecorejz",
+      "contact": {
+        "github": "https://github.com/l1tecorejz",
+        "discord": "L1tE#5321"
+      }
+    }
+  ]
 }

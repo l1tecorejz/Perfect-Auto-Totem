@@ -7,12 +7,11 @@ sourceCompatibility = targetCompatibility = JavaVersion.VERSION_16
 
 archivesBaseName = project.archives_base_name
 version = project.mod_version
-group = project.maven_group
 
 repositories {
     maven {
-        name = "jitpack"
-        url = "https://jitpack.io"
+        name = "meteor-maven-snapshots"
+        url = "https://maven.meteordev.org/snapshots"
     }
 }
 
@@ -23,7 +22,7 @@ dependencies {
     modImplementation "net.fabricmc:fabric-loader:${project.loader_version}"
 
     // Meteor
-    modImplementation "com.github.MeteorDevelopment:meteor-client:master-SNAPSHOT"
+    modImplementation "meteordevelopment:meteor-client:${project.meteor_version}"
 }
 
 processResources {
