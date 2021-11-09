@@ -1,7 +1,6 @@
-package meteordevelopment.addons.L1tE.modules;
+package me.l1tecorejz.meteoraddons.pat.modules;
 
-import meteordevelopment.addons.L1tE.BetterMeteorAddon;
-import meteordevelopment.meteorclient.events.game.GameLeftEvent;
+import me.l1tecorejz.meteoraddons.pat.PerfectAutoTotem;
 import meteordevelopment.meteorclient.events.packets.PacketEvent;
 import meteordevelopment.meteorclient.events.world.TickEvent;
 import meteordevelopment.meteorclient.mixininterface.IExplosion;
@@ -24,7 +23,10 @@ import net.minecraft.item.Items;
 import net.minecraft.network.packet.c2s.play.ClickSlotC2SPacket;
 import net.minecraft.network.packet.c2s.play.PlayerActionC2SPacket;
 import net.minecraft.network.packet.c2s.play.UpdateSelectedSlotC2SPacket;
-import net.minecraft.network.packet.s2c.play.*;
+import net.minecraft.network.packet.s2c.play.CloseScreenS2CPacket;
+import net.minecraft.network.packet.s2c.play.EntityStatusS2CPacket;
+import net.minecraft.network.packet.s2c.play.OpenScreenS2CPacket;
+import net.minecraft.network.packet.s2c.play.UpdateSelectedSlotS2CPacket;
 import net.minecraft.screen.PlayerScreenHandler;
 import net.minecraft.screen.slot.Slot;
 import net.minecraft.util.math.BlockPos;
@@ -35,23 +37,22 @@ import org.apache.commons.lang3.Validate;
 
 import java.util.concurrent.atomic.AtomicBoolean;
 
-import static meteordevelopment.addons.L1tE.utils.inv.*;
+import static me.l1tecorejz.meteoraddons.pat.utils.inv.*;
 
-@SuppressWarnings("ConstantConditions")
 public class AutoTotem extends Module
 {
     public static AutoTotem instance;
 
     public AutoTotem()
     {
-        super(BetterMeteorAddon.CATEGORY, "auto-pop-it", "Best auto totem for 1.17+");
+        super(PerfectAutoTotem.CATEGORY, "auto-pop-it", "Best auto totem for 1.17+");
         instance = this;
         Validate.notNull(Offhand.instance);
     }
 
     //
 
-    @EventHandler private void onTickPre(TickEvent.Pre event)
+    @EventHandler private void tick(TickEvent.Pre event)
     {
         if (mc.player.currentScreenHandler instanceof CreativeInventoryScreen.CreativeScreenHandler) return;
 
@@ -61,7 +62,7 @@ public class AutoTotem extends Module
         {
             if (!(mc.currentScreen instanceof HandledScreen) &&
                 mc.player.currentScreenHandler instanceof PlayerScreenHandler)
-                Offhand.instance.Do();
+                Offhand.instance.tick();
             return;
         }
 
@@ -126,17 +127,14 @@ public class AutoTotem extends Module
 
         if (totem_id == -1)
         {
-            if (is_holding_totem)
+            for (Slot slot : mc.player.currentScreenHandler.slots)
             {
-                for (Slot slot : mc.player.currentScreenHandler.slots)
-                {
-                    if (!slot.getStack().isEmpty()) continue;
-                    Click(slot.id);
-                    return;
-                }
-
-                Click(GetFirstHotbarSlotId() + selected_slot);
+                if (!slot.getStack().isEmpty()) continue;
+                Click(slot.id);
+                return;
             }
+
+            Click(GetFirstHotbarSlotId() + selected_slot);
             return;
         }
 
@@ -152,40 +150,16 @@ public class AutoTotem extends Module
         should_override_totem = !is_totem_in_offhand;
     }
 
-    @EventHandler private void onEzLog(GameLeftEvent event)
-    {
-        int totem_id = GetTotemId();
-        if (totem_id == -1) return;
-
-        if (cfg_version.get() == Versions.one_dot_12)
-        {
-            // TODO
-            return;
-        }
-
-        // TODO: make this shit smarter
-
-        Swap(totem_id, selected_slot);
-
-        totem_id = GetTotemId();
-        if (totem_id == -1) return;
-
-        Swap(totem_id, 40);
-    }
-
     @EventHandler private void onPacketSent(PacketEvent.Sent event)
     {
         if (event.packet instanceof ClickSlotC2SPacket)
         {
-            // TODO: wait after some PlayerActionC2SPacket too?
             should_wait_next_tick.set(true);
             return;
         }
 
         if (event.packet instanceof UpdateSelectedSlotC2SPacket packet)
-        {
             selected_slot = packet.getSelectedSlot();
-        }
     }
 
     @EventHandler private void onPacketReceived(PacketEvent.Receive event)
@@ -195,9 +169,16 @@ public class AutoTotem extends Module
             if (mc.player.currentScreenHandler instanceof PlayerScreenHandler) return;
             if (packet.getStatus() != 35 || packet.getEntity(mc.world) != mc.player) return;
 
-            if (mc.player.getMainHandStack().getItem() != Items.TOTEM_OF_UNDYING && // inaccurate
-                mc.player.getOffHandStack().getItem() == Items.TOTEM_OF_UNDYING)
-                mc.player.getOffHandStack().decrement(1);
+            ItemStack mainhand_stack = mc.player.getInventory().getStack(selected_slot);
+            if (mainhand_stack.getItem() == Items.TOTEM_OF_UNDYING)
+            {
+                mainhand_stack.decrement(1);
+                return;
+            }
+
+            ItemStack offhand_stack = mc.player.getOffHandStack();
+            if (offhand_stack.getItem() == Items.TOTEM_OF_UNDYING)
+                offhand_stack.decrement(1);
         }
         else if (event.packet instanceof UpdateSelectedSlotS2CPacket packet)
         {
@@ -319,9 +300,15 @@ public class AutoTotem extends Module
 
     public enum Versions
     {
-        one_dot_12,
-        one_dot_16,
-        one_dot_17
+        one_dot_12("1.12.2"),
+        one_dot_16("1.16.5"),
+        one_dot_17("1.17+");
+
+        Versions(String name) {this.name = name;}
+
+        String name;
+
+        @Override public String toString() {return name;}
     }
 
     public final Setting<Versions> cfg_version = sg_general.add(new EnumSetting.Builder<Versions>()
@@ -330,7 +317,7 @@ public class AutoTotem extends Module
         .build());
 
     private final Setting<Boolean> cfg_close_screen = sg_general.add(new BoolSetting.Builder()
-        .name("close-screen")
+        .name("close-screen-on-pop")
         .description("Closes any screen handler while putting totem in offhand.")
         .defaultValue(false)
         .build());
