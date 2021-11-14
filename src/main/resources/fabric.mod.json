@@ -3,7 +3,7 @@
   "id": "the-perfect-auto-totem",
   "version": "${version}",
   "name": "Perfect Auto Totem",
-  "description": "The masterpiece addon by L1tE",
+  "description": "Small l1teor.",
   "environment": "client",
   "entrypoints": {
     "meteor": [
@@ -13,10 +13,11 @@
   "mixins": [
     "pat.mixins.json"
   ],
+  "accessWidener": "pat.aw",
   "depends": {
     "java": ">=16",
     "minecraft": ">=1.17.1",
-    "meteor-client": ">0.4.3"
+    "meteor-client": ">0.4.6"
   },
   "authors": [
     {
