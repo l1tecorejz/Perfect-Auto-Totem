@@ -4,12 +4,10 @@ import me.l1tecorejz.meteoraddons.pat.PerfectAutoTotem;
 import meteordevelopment.meteorclient.events.packets.PacketEvent;
 import meteordevelopment.meteorclient.events.world.TickEvent;
 import meteordevelopment.meteorclient.mixininterface.IExplosion;
-import meteordevelopment.meteorclient.settings.BoolSetting;
-import meteordevelopment.meteorclient.settings.EnumSetting;
-import meteordevelopment.meteorclient.settings.Setting;
-import meteordevelopment.meteorclient.settings.SettingGroup;
+import meteordevelopment.meteorclient.settings.*;
 import meteordevelopment.meteorclient.systems.modules.Module;
 import meteordevelopment.orbit.EventHandler;
+import net.minecraft.client.MinecraftClient;
 import net.minecraft.client.gui.screen.ingame.CreativeInventoryScreen;
 import net.minecraft.client.gui.screen.ingame.HandledScreen;
 import net.minecraft.client.network.PlayerListEntry;
@@ -17,16 +15,14 @@ import net.minecraft.enchantment.EnchantmentHelper;
 import net.minecraft.entity.attribute.EntityAttributeInstance;
 import net.minecraft.entity.attribute.EntityAttributes;
 import net.minecraft.entity.damage.DamageSource;
+import net.minecraft.entity.effect.StatusEffect;
 import net.minecraft.entity.effect.StatusEffects;
 import net.minecraft.item.ItemStack;
 import net.minecraft.item.Items;
 import net.minecraft.network.packet.c2s.play.ClickSlotC2SPacket;
 import net.minecraft.network.packet.c2s.play.PlayerActionC2SPacket;
 import net.minecraft.network.packet.c2s.play.UpdateSelectedSlotC2SPacket;
-import net.minecraft.network.packet.s2c.play.CloseScreenS2CPacket;
-import net.minecraft.network.packet.s2c.play.EntityStatusS2CPacket;
-import net.minecraft.network.packet.s2c.play.OpenScreenS2CPacket;
-import net.minecraft.network.packet.s2c.play.UpdateSelectedSlotS2CPacket;
+import net.minecraft.network.packet.s2c.play.*;
 import net.minecraft.screen.PlayerScreenHandler;
 import net.minecraft.screen.slot.Slot;
 import net.minecraft.util.math.BlockPos;
@@ -52,16 +48,20 @@ public class AutoTotem extends Module
 
     //
 
-    @EventHandler private void tick(TickEvent.Pre event)
+    @EventHandler
+    private void tick(TickEvent.Pre event)
     {
-        if (mc.player.currentScreenHandler instanceof CreativeInventoryScreen.CreativeScreenHandler) return;
+        if (delay_ticks_left > 0)
+        {
+            --delay_ticks_left;
+            return;
+        }
 
-        if (should_wait_next_tick.getAndSet(false)) return;
+        if (mc.player.currentScreenHandler instanceof CreativeInventoryScreen.CreativeScreenHandler) return;
 
         if (Offhand.instance.isActive() && SmartCheck())
         {
-            if (!(mc.currentScreen instanceof HandledScreen) &&
-                mc.player.currentScreenHandler instanceof PlayerScreenHandler)
+            if (!(mc.currentScreen instanceof HandledScreen) && mc.player.currentScreenHandler instanceof PlayerScreenHandler)
                 Offhand.instance.tick();
             return;
         }
@@ -75,13 +75,16 @@ public class AutoTotem extends Module
             is_totem_in_offhand = offhand_stack.getItem() == Items.TOTEM_OF_UNDYING;
         boolean can_click_offhand = mc.player.currentScreenHandler instanceof PlayerScreenHandler;
 
-        if (is_totem_in_offhand && !ShouldOverrideTotem())
+        if (cfg_masturbation.get())
         {
-            if (!(mc.currentScreen instanceof HandledScreen) &&
-                (should_click_blank || (cfg_version.get() != Versions.one_dot_12 && is_holding_totem)))
-            {
-                should_click_blank = false;
+            if (cfg_masturbation_delay.get() == 0 || (mc.player.age % cfg_masturbation_delay.get()) == 0)
+                should_override_totem = true;
+        }
 
+        if (is_totem_in_offhand && !should_override_totem)
+        {
+            if (!(mc.currentScreen instanceof HandledScreen) && is_holding_totem)
+            {
                 for (Slot slot : mc.player.currentScreenHandler.slots)
                 {
                     if (!slot.getStack().isEmpty()) continue;
@@ -99,7 +102,7 @@ public class AutoTotem extends Module
         if (!can_click_offhand && cfg_close_screen.get())
         {
             mc.player.closeHandledScreen();
-            can_click_offhand = true;
+            return;
         }
 
         if (is_holding_totem && can_click_offhand)
@@ -141,33 +144,39 @@ public class AutoTotem extends Module
         if (cfg_version.get() == Versions.one_dot_12)
         {
             Click(totem_id);
-            should_click_blank = true;
             return;
         }
 
         Swap(totem_id, 40);
 
-        should_override_totem = !is_totem_in_offhand;
+        should_override_totem = !is_totem_in_offhand && ShouldOverrideTotem();
     }
 
-    @EventHandler private void onPacketSent(PacketEvent.Sent event)
+    @EventHandler
+    private void onPacketSent(PacketEvent.Sent event)
     {
         if (event.packet instanceof ClickSlotC2SPacket)
         {
-            should_wait_next_tick.set(true);
-            return;
+            delay_ticks_left = cfg_action_delay.get();
         }
-
+        else if (event.packet instanceof PlayerActionC2SPacket packet)
+        {
+            if (packet.getAction() == PlayerActionC2SPacket.Action.SWAP_ITEM_WITH_OFFHAND)
+                delay_ticks_left = cfg_action_delay.get();
+        }
         if (event.packet instanceof UpdateSelectedSlotC2SPacket packet)
+        {
             selected_slot = packet.getSelectedSlot();
+        }
     }
 
     @EventHandler private void onPacketReceived(PacketEvent.Receive event)
     {
         if (event.packet instanceof EntityStatusS2CPacket packet)
         {
+            if (packet.getStatus() != 35 || packet.id != mc.player.getId()) return;
+
             if (mc.player.currentScreenHandler instanceof PlayerScreenHandler) return;
-            if (packet.getStatus() != 35 || packet.getEntity(mc.world) != mc.player) return;
 
             ItemStack mainhand_stack = mc.player.getInventory().getStack(selected_slot);
             if (mainhand_stack.getItem() == Items.TOTEM_OF_UNDYING)
@@ -191,12 +200,11 @@ public class AutoTotem extends Module
         }
     }
 
-    @Override public void onActivate()
+    @Override
+    public void onActivate()
     {
         should_override_totem = true;
         selected_slot = mc.player.getInventory().selectedSlot;
-
-        super.onActivate();
     }
 
     //
@@ -221,12 +229,11 @@ public class AutoTotem extends Module
 
     private boolean ShouldOverrideTotem()
     {
-        return should_override_totem && (cfg_version.get() == Versions.one_dot_16 ||
-            (!(mc.player.currentScreenHandler instanceof PlayerScreenHandler) &&
-                cfg_version.get() == Versions.one_dot_17));
+        return cfg_version.get() != Versions.one_dot_17 ||
+            (!(mc.player.currentScreenHandler instanceof PlayerScreenHandler) && cfg_version.get() == Versions.one_dot_17);
     }
 
-    private static final double cry_damage = (float)((int)((1 + 1) / 2.0D * 7.0D * 12.0D + 1.0D));
+    private static final double cry_damage = (float)((int)((1D + 1D) / 2.0D * 7.0D * 12.0D + 1.0D));
     private static final Explosion explosion = new Explosion
         (null, null, 0, 0, 0, 6.0F, false, Explosion.DestructionType.DESTROY);
     private boolean SmartCheck()    // TODO: check wither explosion damage too
@@ -241,9 +248,12 @@ public class AutoTotem extends Module
         if (mc.player.fallDistance > 3.f && health - mc.player.fallDistance * 0.5 <= 2.0F) return false;
 
         double resistance_coefficient = 1.d;
-        if (mc.player.hasStatusEffect(StatusEffects.RESISTANCE))
+
+        var resistance_effect = mc.player.getStatusEffect(StatusEffects.RESISTANCE);
+
+        if (resistance_effect != null)
         {
-            resistance_coefficient -= (mc.player.getStatusEffect(StatusEffects.RESISTANCE).getAmplifier() + 1) * 0.2;
+            resistance_coefficient -= (resistance_effect.getAmplifier() + 1) * 0.2;
             if (resistance_coefficient <= 0.d) return true;
         }
 
@@ -257,8 +267,7 @@ public class AutoTotem extends Module
 
         damage *= resistance_coefficient;
 
-        EntityAttributeInstance attribute_instance =
-            mc.player.getAttributeInstance(EntityAttributes.GENERIC_ARMOR_TOUGHNESS);
+        EntityAttributeInstance attribute_instance = mc.player.getAttributeInstance(EntityAttributes.GENERIC_ARMOR_TOUGHNESS);
 
         float f = 2.0F + (float) attribute_instance.getValue() / 4.0F;
         float g = (float) MathHelper.clamp((float) mc.player.getArmor() - damage / f,
@@ -268,8 +277,7 @@ public class AutoTotem extends Module
         // Reduce by enchants
         ((IExplosion) explosion).set(mc.player.getPos(), 6.0F, false);
 
-        int protLevel =
-            EnchantmentHelper.getProtectionAmount(mc.player.getArmorItems(), DamageSource.explosion(explosion));
+        int protLevel = EnchantmentHelper.getProtectionAmount(mc.player.getArmorItems(), DamageSource.explosion(explosion));
         if (protLevel > 20) protLevel = 20;
 
         damage *= 1 - (protLevel / 25.0);
@@ -279,10 +287,15 @@ public class AutoTotem extends Module
 
     private float GetHealth()
     {
-        return mc.player.getHealth() + mc.player.getAbsorptionAmount(); // TODO: fix ghost absorption
+        float health = mc.player.getHealth();
+
+        if (mc.player.getStatusEffect(StatusEffects.ABSORPTION) != null)
+            health += mc.player.getAbsorptionAmount();
+
+        return health;
     }
 
-    private long GetLatency()   // TODO: need more accurate latency calculation
+    private long GetLatency()
     {
         PlayerListEntry playerListEntry = mc.player.networkHandler.getPlayerListEntry(mc.player.getUuid());
         return playerListEntry != null ? playerListEntry.getLatency() : 0L;
@@ -290,9 +303,10 @@ public class AutoTotem extends Module
 
     // vars
 
-    private final AtomicBoolean should_wait_next_tick = new AtomicBoolean(false);
-    private boolean should_override_totem, should_click_blank;
+    //private final AtomicBoolean should_wait_next_tick = new AtomicBoolean(false);
+    private boolean should_override_totem;
     private int selected_slot = 0;
+    private int delay_ticks_left = 0;
 
     // settings
 
@@ -320,5 +334,21 @@ public class AutoTotem extends Module
         .name("close-screen-on-pop")
         .description("Closes any screen handler while putting totem in offhand.")
         .defaultValue(false)
+        .build());
+
+    private final Setting<Integer> cfg_action_delay = sg_general.add(new IntSetting.Builder()
+        .name("action-delay")
+        .defaultValue(0)
+        .build());
+
+    private final Setting<Boolean> cfg_masturbation = sg_general.add(new BoolSetting.Builder()
+        .name("totem-spam")
+        .defaultValue(false)
+        .build());
+
+    private final Setting<Integer> cfg_masturbation_delay = sg_general.add(new IntSetting.Builder()
+        .name("spam-delay")
+        .visible(() -> cfg_masturbation.get())
+        .defaultValue(0)
         .build());
 }

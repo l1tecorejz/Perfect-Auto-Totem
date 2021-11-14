@@ -1,9 +1,12 @@
 {
   "required": true,
-  "package": "meteordevelopment.addons.template.mixins",
+  "package": "me.l1tecorejz.meteoraddons.pat.mixins",
   "compatibilityLevel": "JAVA_16",
   "client": [],
   "injectors": {
     "defaultRequire": 1
-  }
+  },
+  "mixins": [
+
+  ]
 }
