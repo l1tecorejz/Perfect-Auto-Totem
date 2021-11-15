@@ -8,7 +8,6 @@ import meteordevelopment.meteorclient.mixininterface.IExplosion;
 import meteordevelopment.meteorclient.settings.*;
 import meteordevelopment.meteorclient.systems.modules.Module;
 import meteordevelopment.orbit.EventHandler;
-import net.minecraft.client.MinecraftClient;
 import net.minecraft.client.gui.screen.ingame.CreativeInventoryScreen;
 import net.minecraft.client.gui.screen.ingame.HandledScreen;
 import net.minecraft.client.network.PlayerListEntry;
@@ -16,14 +15,14 @@ import net.minecraft.enchantment.EnchantmentHelper;
 import net.minecraft.entity.attribute.EntityAttributeInstance;
 import net.minecraft.entity.attribute.EntityAttributes;
 import net.minecraft.entity.damage.DamageSource;
-import net.minecraft.entity.effect.StatusEffect;
 import net.minecraft.entity.effect.StatusEffects;
 import net.minecraft.item.ItemStack;
 import net.minecraft.item.Items;
 import net.minecraft.network.packet.c2s.play.ClickSlotC2SPacket;
 import net.minecraft.network.packet.c2s.play.PlayerActionC2SPacket;
 import net.minecraft.network.packet.c2s.play.UpdateSelectedSlotC2SPacket;
-import net.minecraft.network.packet.s2c.play.*;
+import net.minecraft.network.packet.s2c.play.EntityStatusS2CPacket;
+import net.minecraft.network.packet.s2c.play.UpdateSelectedSlotS2CPacket;
 import net.minecraft.screen.PlayerScreenHandler;
 import net.minecraft.screen.slot.Slot;
 import net.minecraft.util.Hand;
@@ -32,8 +31,6 @@ import net.minecraft.util.math.Direction;
 import net.minecraft.util.math.MathHelper;
 import net.minecraft.world.explosion.Explosion;
 import org.apache.commons.lang3.Validate;
-
-import java.util.concurrent.atomic.AtomicBoolean;
 
 public class AutoTotem extends Module
 {
@@ -57,8 +54,6 @@ public class AutoTotem extends Module
             return;
         }
 
-        if (cfg_anti_bow_kick.get() && mc.player.isUsingItem()) return;
-
         if (mc.player.currentScreenHandler instanceof CreativeInventoryScreen.CreativeScreenHandler) return;
 
         if (Offhand.instance.isActive() && SmartCheck())
@@ -77,10 +72,15 @@ public class AutoTotem extends Module
             is_totem_in_offhand = offhand_stack.getItem() == Items.TOTEM_OF_UNDYING,
             can_click_offhand = mc.player.currentScreenHandler instanceof PlayerScreenHandler;
 
-        if (cfg_masturbation.get() && (!(mc.currentScreen instanceof HandledScreen) || !isClassic()))
+        if (cfg_try_hard.get() && !(isClassic() && mc.currentScreen instanceof HandledScreen))
         {
-            if (cfg_masturbation_delay.get() == 0 || (mc.player.age % cfg_masturbation_delay.get()) == 0)
+            if (try_hard_ticks_left > 0)
+                --try_hard_ticks_left;
+            else
+            {
+                try_hard_ticks_left = cfg_try_hard_delay.get();
                 should_override_totem = true;
+            }
         }
 
         if (is_totem_in_offhand && !should_override_totem) return;
@@ -143,15 +143,15 @@ public class AutoTotem extends Module
         {
             delay_ticks_left = cfg_action_delay.get();
 
-            if (isClassic())    // prevent gap disease
-                mc.player.stopUsingItem();
+            if (isClassic() && cfg_anti_gap_disease.get())    // prevent gap disease
+                mc.interactionManager.stopUsingItem(mc.player);
         }
         else if (event.packet instanceof PlayerActionC2SPacket packet)
         {
             if (packet.getAction() == PlayerActionC2SPacket.Action.SWAP_ITEM_WITH_OFFHAND)
                 delay_ticks_left = cfg_action_delay.get();
         }
-        if (event.packet instanceof UpdateSelectedSlotC2SPacket packet)
+        else if (event.packet instanceof UpdateSelectedSlotC2SPacket packet)
         {
             selected_slot = packet.getSelectedSlot();
         }
@@ -185,10 +185,10 @@ public class AutoTotem extends Module
             // TODO: fix small desync
             selected_slot = packet.getSlot();
         }
-        else if (event.packet instanceof CloseScreenS2CPacket)
+        /*else if (event.packet instanceof CloseScreenS2CPacket)
         {
             should_override_totem = true;
-        }
+        }*/
     }
 
     @Override
@@ -302,7 +302,7 @@ public class AutoTotem extends Module
     //private final AtomicBoolean should_wait_next_tick = new AtomicBoolean(false);
     private boolean should_override_totem;
     private int selected_slot = 0;
-    private int delay_ticks_left = 0;
+    private int delay_ticks_left = 0, try_hard_ticks_left = 0;
 
     // settings
 
@@ -337,20 +337,20 @@ public class AutoTotem extends Module
         .defaultValue(0)
         .build());
 
-    private final Setting<Boolean> cfg_anti_bow_kick = sg_general.add(new BoolSetting.Builder()
-        .name("anti-bow-kick")
+    private final Setting<Boolean> cfg_anti_gap_disease = sg_general.add(new BoolSetting.Builder()
+        .name("stop-eating-on-action")
         .visible(() -> cfg_version.get() == Versions.one_dot_12)
         .defaultValue(true)
         .build());
 
-    private final Setting<Boolean> cfg_masturbation = sg_general.add(new BoolSetting.Builder()
+    private final Setting<Boolean> cfg_try_hard = sg_general.add(new BoolSetting.Builder()
         .name("totem-spam")
         .defaultValue(false)
         .build());
 
-    private final Setting<Integer> cfg_masturbation_delay = sg_general.add(new IntSetting.Builder()
+    private final Setting<Integer> cfg_try_hard_delay = sg_general.add(new IntSetting.Builder()
         .name("spam-delay")
-        .visible(() -> cfg_masturbation.get())
+        .visible(() -> cfg_try_hard.get())
         .defaultValue(0)
         .build());
 }
