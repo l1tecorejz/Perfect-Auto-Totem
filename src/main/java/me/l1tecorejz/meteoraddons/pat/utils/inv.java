@@ -1,5 +1,6 @@
 package me.l1tecorejz.meteoraddons.pat.utils;
 
+import me.l1tecorejz.meteoraddons.pat.modules.AutoTotem;
 import net.minecraft.screen.PlayerScreenHandler;
 import net.minecraft.screen.slot.SlotActionType;
 
@@ -20,5 +21,11 @@ public class inv
     {
         if (mc.player.currentScreenHandler instanceof PlayerScreenHandler) return 36;
         return mc.player.currentScreenHandler.slots.size() - 9;
+    }
+
+    public static void Move(int id)
+    {
+        if (AutoTotem.isClassic())  Click(id);
+        else                        Swap(id, 40);
     }
 }
