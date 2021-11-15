@@ -40,7 +40,7 @@ public class Offhand extends Module
 
         if (crystal_id == -1) return;
 
-        Move(crystal_id);
+        inv.Move(crystal_id);
     }
 
     private int GetCryId()
@@ -59,11 +59,5 @@ public class Offhand extends Module
         }
 
         return -1;
-    }
-
-    private void Move(int id)
-    {
-        if (AutoTotem.instance.cfg_version.get() == AutoTotem.Versions.one_dot_12) inv.Click(id);
-        else inv.Swap(id, 40);
     }
 }

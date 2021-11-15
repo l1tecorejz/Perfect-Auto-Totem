@@ -1,6 +1,7 @@
 package me.l1tecorejz.meteoraddons.pat.modules;
 
 import me.l1tecorejz.meteoraddons.pat.PerfectAutoTotem;
+import me.l1tecorejz.meteoraddons.pat.utils.inv;
 import meteordevelopment.meteorclient.events.packets.PacketEvent;
 import meteordevelopment.meteorclient.events.world.TickEvent;
 import meteordevelopment.meteorclient.mixininterface.IExplosion;
@@ -25,6 +26,7 @@ import net.minecraft.network.packet.c2s.play.UpdateSelectedSlotC2SPacket;
 import net.minecraft.network.packet.s2c.play.*;
 import net.minecraft.screen.PlayerScreenHandler;
 import net.minecraft.screen.slot.Slot;
+import net.minecraft.util.Hand;
 import net.minecraft.util.math.BlockPos;
 import net.minecraft.util.math.Direction;
 import net.minecraft.util.math.MathHelper;
@@ -32,8 +34,6 @@ import net.minecraft.world.explosion.Explosion;
 import org.apache.commons.lang3.Validate;
 
 import java.util.concurrent.atomic.AtomicBoolean;
-
-import static me.l1tecorejz.meteoraddons.pat.utils.inv.*;
 
 public class AutoTotem extends Module
 {
@@ -57,6 +57,8 @@ public class AutoTotem extends Module
             return;
         }
 
+        if (cfg_anti_bow_kick.get() && mc.player.isUsingItem()) return;
+
         if (mc.player.currentScreenHandler instanceof CreativeInventoryScreen.CreativeScreenHandler) return;
 
         if (Offhand.instance.isActive() && SmartCheck())
@@ -72,82 +74,64 @@ public class AutoTotem extends Module
 
         final boolean
             is_holding_totem = cursor_stack.getItem() == Items.TOTEM_OF_UNDYING,
-            is_totem_in_offhand = offhand_stack.getItem() == Items.TOTEM_OF_UNDYING;
-        boolean can_click_offhand = mc.player.currentScreenHandler instanceof PlayerScreenHandler;
+            is_totem_in_offhand = offhand_stack.getItem() == Items.TOTEM_OF_UNDYING,
+            can_click_offhand = mc.player.currentScreenHandler instanceof PlayerScreenHandler;
 
-        if (cfg_masturbation.get())
+        if (cfg_masturbation.get() && (!(mc.currentScreen instanceof HandledScreen) || !isClassic()))
         {
             if (cfg_masturbation_delay.get() == 0 || (mc.player.age % cfg_masturbation_delay.get()) == 0)
                 should_override_totem = true;
         }
 
-        if (is_totem_in_offhand && !should_override_totem)
-        {
-            if (!(mc.currentScreen instanceof HandledScreen) && is_holding_totem)
-            {
-                for (Slot slot : mc.player.currentScreenHandler.slots)
-                {
-                    if (!slot.getStack().isEmpty()) continue;
-                    Click(slot.id);
-                    return;
-                }
-            }
-
-            return;
-        }
+        if (is_totem_in_offhand && !should_override_totem) return;
 
         final int totem_id = GetTotemId();
         if (totem_id == -1 && !is_holding_totem) return;
 
-        if (!can_click_offhand && cfg_close_screen.get())
-        {
-            mc.player.closeHandledScreen();
-            return;
-        }
-
         if (is_holding_totem && can_click_offhand)
         {
-            Click(45);
+            inv.Click(45);
             return;
         }
 
-        if (cfg_version.get() == Versions.one_dot_12 && !can_click_offhand)
+        if (!can_click_offhand)
         {
-            ItemStack mainhand_stack = mc.player.getInventory().getStack(selected_slot);
-            if (mainhand_stack.getItem() == Items.TOTEM_OF_UNDYING)
+            if (isClassic())
             {
-                mc.player.networkHandler.sendPacket(new PlayerActionC2SPacket
-                    (PlayerActionC2SPacket.Action.SWAP_ITEM_WITH_OFFHAND, BlockPos.ORIGIN, Direction.DOWN));
-                return;
-            }
+                ItemStack mainhand_stack = mc.player.getInventory().getStack(selected_slot);
+                if (mainhand_stack.getItem() == Items.TOTEM_OF_UNDYING)
+                {
+                    mc.player.networkHandler.sendPacket(new PlayerActionC2SPacket
+                        (PlayerActionC2SPacket.Action.SWAP_ITEM_WITH_OFFHAND, BlockPos.ORIGIN, Direction.DOWN));
+                    mc.player.setStackInHand(Hand.OFF_HAND, mc.player.getInventory().getStack(selected_slot));
+                    mc.player.getInventory().setStack(selected_slot, offhand_stack);
+                    mc.player.clearActiveItem();
+                    return;
+                }
 
-            if (is_holding_totem)
+                if (is_holding_totem)
+                    inv.Click(inv.GetFirstHotbarSlotId() + selected_slot);
+
+                should_override_totem = false;
+            }
+            else
             {
-                Click(GetFirstHotbarSlotId() + selected_slot);
-                return;
+                if (totem_id == -1 && is_holding_totem)
+                {
+                    for (Slot slot : mc.player.currentScreenHandler.slots)
+                    {
+                        if (!slot.getStack().isEmpty()) continue;
+                        inv.Click(slot.id);
+                        return;
+                    }
+
+                    inv.Click(inv.GetFirstHotbarSlotId() + selected_slot);
+                    return;
+                }
             }
         }
 
-        if (totem_id == -1)
-        {
-            for (Slot slot : mc.player.currentScreenHandler.slots)
-            {
-                if (!slot.getStack().isEmpty()) continue;
-                Click(slot.id);
-                return;
-            }
-
-            Click(GetFirstHotbarSlotId() + selected_slot);
-            return;
-        }
-
-        if (cfg_version.get() == Versions.one_dot_12)
-        {
-            Click(totem_id);
-            return;
-        }
-
-        Swap(totem_id, 40);
+        inv.Move(totem_id);
 
         should_override_totem = !is_totem_in_offhand && ShouldOverrideTotem();
     }
@@ -158,6 +142,9 @@ public class AutoTotem extends Module
         if (event.packet instanceof ClickSlotC2SPacket)
         {
             delay_ticks_left = cfg_action_delay.get();
+
+            if (isClassic())    // prevent gap disease
+                mc.player.stopUsingItem();
         }
         else if (event.packet instanceof PlayerActionC2SPacket packet)
         {
@@ -170,13 +157,17 @@ public class AutoTotem extends Module
         }
     }
 
-    @EventHandler private void onPacketReceived(PacketEvent.Receive event)
+    @EventHandler
+    private void onPacketReceived(PacketEvent.Receive event)
     {
         if (event.packet instanceof EntityStatusS2CPacket packet)
         {
             if (packet.getStatus() != 35 || packet.id != mc.player.getId()) return;
 
             if (mc.player.currentScreenHandler instanceof PlayerScreenHandler) return;
+
+            if (cfg_close_screen.get())
+                mc.player.closeHandledScreen();
 
             ItemStack mainhand_stack = mc.player.getInventory().getStack(selected_slot);
             if (mainhand_stack.getItem() == Items.TOTEM_OF_UNDYING)
@@ -194,7 +185,7 @@ public class AutoTotem extends Module
             // TODO: fix small desync
             selected_slot = packet.getSlot();
         }
-        else if (event.packet instanceof OpenScreenS2CPacket || event.packet instanceof CloseScreenS2CPacket)
+        else if (event.packet instanceof CloseScreenS2CPacket)
         {
             should_override_totem = true;
         }
@@ -209,9 +200,14 @@ public class AutoTotem extends Module
 
     //
 
+    public static boolean isClassic()
+    {
+        return instance.cfg_version.get() == Versions.one_dot_12;
+    }
+
     private int GetTotemId()
     {
-        final int hotbar_start = GetFirstHotbarSlotId();
+        final int hotbar_start = inv.GetFirstHotbarSlotId();
         for (int i = hotbar_start; i < hotbar_start + 9; ++i)
         {
             if (mc.player.currentScreenHandler.getSlot(i).getStack().getItem() != Items.TOTEM_OF_UNDYING) continue;
@@ -314,7 +310,7 @@ public class AutoTotem extends Module
 
     public enum Versions
     {
-        one_dot_12("1.12.2"),
+        one_dot_12("classic"),
         one_dot_16("1.16.5"),
         one_dot_17("1.17+");
 
@@ -325,8 +321,8 @@ public class AutoTotem extends Module
         @Override public String toString() {return name;}
     }
 
-    public final Setting<Versions> cfg_version = sg_general.add(new EnumSetting.Builder<Versions>()
-        .name("minecraft-server-version")
+    private final Setting<Versions> cfg_version = sg_general.add(new EnumSetting.Builder<Versions>()
+        .name("mode")
         .defaultValue(Versions.one_dot_17)
         .build());
 
@@ -339,6 +335,12 @@ public class AutoTotem extends Module
     private final Setting<Integer> cfg_action_delay = sg_general.add(new IntSetting.Builder()
         .name("action-delay")
         .defaultValue(0)
+        .build());
+
+    private final Setting<Boolean> cfg_anti_bow_kick = sg_general.add(new BoolSetting.Builder()
+        .name("anti-bow-kick")
+        .visible(() -> cfg_version.get() == Versions.one_dot_12)
+        .defaultValue(true)
         .build());
 
     private final Setting<Boolean> cfg_masturbation = sg_general.add(new BoolSetting.Builder()
