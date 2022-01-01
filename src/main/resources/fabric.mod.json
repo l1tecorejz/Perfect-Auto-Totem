@@ -15,9 +15,7 @@
   ],
   "accessWidener": "pat.aw",
   "depends": {
-    "java": ">=16",
-    "minecraft": ">=1.17.1",
-    "meteor-client": ">0.4.6"
+    "minecraft": ">=1.18"
   },
   "authors": [
     {
