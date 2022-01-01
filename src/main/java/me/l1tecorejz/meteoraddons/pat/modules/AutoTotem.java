@@ -116,7 +116,7 @@ public class AutoTotem extends Module
             }
             else
             {
-                if (totem_id == -1 && is_holding_totem)
+                if (totem_id == -1)
                 {
                     for (Slot slot : mc.player.currentScreenHandler.slots)
                     {
@@ -238,6 +238,10 @@ public class AutoTotem extends Module
         if (GetLatency() >= 125) return false;  // TODO: assume TPS: 2.5 * interval_per_tick instead of 125
 
         float health = GetHealth();
+
+        if (Offhand.instance.cfg_mode.get() == Offhand.OffhandMode.normal)
+            return health >= Offhand.instance.cfg_min_health.get();
+
         if (health < 10.0F) return false;
 
         // TODO: fix delayed fall damage
@@ -350,7 +354,7 @@ public class AutoTotem extends Module
 
     private final Setting<Integer> cfg_try_hard_delay = sg_general.add(new IntSetting.Builder()
         .name("spam-delay")
-        .visible(() -> cfg_try_hard.get())
+        .visible(cfg_try_hard::get)
         .defaultValue(0)
         .build());
 }

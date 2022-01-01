@@ -2,6 +2,10 @@ package me.l1tecorejz.meteoraddons.pat.modules;
 
 import me.l1tecorejz.meteoraddons.pat.PerfectAutoTotem;
 import me.l1tecorejz.meteoraddons.pat.utils.inv;
+import meteordevelopment.meteorclient.settings.EnumSetting;
+import meteordevelopment.meteorclient.settings.IntSetting;
+import meteordevelopment.meteorclient.settings.Setting;
+import meteordevelopment.meteorclient.settings.SettingGroup;
 import meteordevelopment.meteorclient.systems.modules.Module;
 import net.minecraft.item.Item;
 import net.minecraft.item.Items;
@@ -60,4 +64,23 @@ public class Offhand extends Module
 
         return -1;
     }
+
+    private final SettingGroup sg_general = settings.getDefaultGroup();
+
+    public enum OffhandMode
+    {
+        smart,
+        normal
+    }
+
+    public final Setting<OffhandMode> cfg_mode = sg_general.add(new EnumSetting.Builder<OffhandMode>()
+        .name("mode")
+        .defaultValue(OffhandMode.smart)
+        .build());
+
+    public final Setting<Integer> cfg_min_health = sg_general.add(new IntSetting.Builder()
+        .name("min-health")
+        .visible(() -> cfg_mode.get() == OffhandMode.normal)
+        .defaultValue(17).sliderMin(2).sliderMax(36)
+        .build());
 }
