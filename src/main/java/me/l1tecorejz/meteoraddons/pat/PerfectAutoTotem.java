@@ -31,4 +31,9 @@ public class PerfectAutoTotem extends MeteorAddon
     public static final Category CATEGORY = new Category("l1tecorejz'");
 
 	@Override public void onRegisterCategories() {Modules.registerCategory(CATEGORY);}
+
+    @Override
+    public String getPackage() {
+        return null;
+    }
 }
