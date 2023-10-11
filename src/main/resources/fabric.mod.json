@@ -21,7 +21,7 @@
     "java": ">=17",
     "minecraft": ">=${mc_version}",
     "meteor-client": "*"
-  }
+  },
   "authors": [
     {
       "name": "l1tecorejz",
