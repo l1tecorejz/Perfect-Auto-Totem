@@ -13,7 +13,7 @@
   "mixins": [
     "pat.mixins.json"
   ],
-  "accessWidener": "pat.aw",
+  "accessWidener": "pat.accesswidener",
   "custom": {
     "meteor-client:color": "225,25,25"
   },
