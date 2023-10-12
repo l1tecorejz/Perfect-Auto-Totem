@@ -34,6 +34,6 @@ public class PerfectAutoTotem extends MeteorAddon
 
     @Override
     public String getPackage() {
-        return null;
+        return "me.l1tecorejz.meteoraddons.pat";
     }
 }
