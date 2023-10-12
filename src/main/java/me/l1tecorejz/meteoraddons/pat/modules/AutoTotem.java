@@ -14,7 +14,6 @@ import net.minecraft.client.network.PlayerListEntry;
 import net.minecraft.enchantment.EnchantmentHelper;
 import net.minecraft.entity.attribute.EntityAttributeInstance;
 import net.minecraft.entity.attribute.EntityAttributes;
-import net.minecraft.entity.damage.DamageSource;
 import net.minecraft.entity.effect.StatusEffects;
 import net.minecraft.item.ItemStack;
 import net.minecraft.item.Items;
@@ -230,8 +229,6 @@ public class AutoTotem extends Module
     }
 
     private static final double cry_damage = (float)((int)((1D + 1D) / 2.0D * 7.0D * 12.0D + 1.0D));
-    private static final Explosion explosion = new Explosion
-        (null, null, 0, 0, 0, 6.0F, false, Explosion.DestructionType.DESTROY);
     private boolean SmartCheck()    // TODO: check wither explosion damage too
     {
         if (mc.player.isFallFlying()) return false; // TODO: return false only when speed is enough too pop totem
@@ -275,9 +272,10 @@ public class AutoTotem extends Module
         damage *= 1 - g / 25.0F;
 
         // Reduce by enchants
-        ((IExplosion) explosion).set(mc.player.getPos(), 6.0F, false);
-
-        int protLevel = EnchantmentHelper.getProtectionAmount(mc.player.getArmorItems(), DamageSource.explosion(explosion));
+        Explosion explosion = new Explosion(null, null,
+                mc.player.getX(), mc.player.getY(), mc.player.getZ(),
+                6.0F, false, Explosion.DestructionType.DESTROY);
+        int protLevel = EnchantmentHelper.getProtectionAmount(mc.player.getArmorItems(), mc.world.getDamageSources().explosion(explosion));
         if (protLevel > 20) protLevel = 20;
 
         damage *= 1 - (protLevel / 25.0);
