@@ -4,6 +4,15 @@
   "version": "${version}",
   "name": "Perfect Auto Totem",
   "description": "Small l1teor.",
+  "authors": [
+    {
+      "name": "l1tecorejz",
+      "contact": {
+        "github": "https://github.com/l1tecorejz",
+        "discord": "L1tE#5321"
+      }
+    }
+  ],
   "environment": "client",
   "entrypoints": {
     "meteor": [
@@ -15,15 +24,8 @@
   ],
   "accessWidener": "pat.aw",
   "depends": {
-    "minecraft": ">=1.18"
-  },
-  "authors": [
-    {
-      "name": "l1tecorejz",
-      "contact": {
-        "github": "https://github.com/l1tecorejz",
-        "discord": "L1tE#5321"
-      }
-    }
-  ]
+    "java": ">=17",
+    "minecraft": ">=${mc_version}",
+    "meteor-client": "*"
+  }
 }
